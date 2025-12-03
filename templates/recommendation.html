@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Recommendations - CollegeFinder{% endblock %}
+
+{% block main_class %}container mt-5 pt-5{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm rounded-4 p-4">
+  <h3 class="mb-3">Recommended Colleges</h3>
+  <p class="text-muted">Based on your profile{% if user and user.category %} ({{ user.category }}){% endif %}{% if session.preferred_colleges %}, and your preferences{% endif %}.</p>
+
+  {% if recommendation and recommendation|length > 0 %}
+    <div class="table-responsive">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>College</th>
+            <th>Branch</th>
+            <th>Round</th>
+            <th>Cutoff</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rec in recommendation %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ rec.college_name }}</td>
+            <td>{{ rec.branch_name }}</td>
+            <td>{{ rec.round or '-' }}</td>
+            <td>{{ rec.cutoff or '-' }}</td>
+            <td>
+              {% if rec.status == 'Safe' %}
+                <span class="badge bg-success">{{ rec.status }}</span>
+              {% elif rec.status == 'Reach' %}
+                <span class="badge bg-warning text-dark">{{ rec.status }}</span>
+              {% else %}
+                <span class="badge bg-secondary">{{ rec.status }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      No recommendations found. Try updating your profile or removing preference filters.
+    </div>
+  {% endif %}
+
+  <div class="d-flex justify-content-between mt-3">
+    <a href="{{ url_for('preferences') }}" class="btn btn-outline-secondary">Back to Preferences</a>
+    <a href="{{ url_for('profile') }}" class="btn btn-primary">Edit Profile</a>
+  </div>
+</div>
+{% endblock %}

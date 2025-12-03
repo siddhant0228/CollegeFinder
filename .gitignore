@@ -1,0 +1,54 @@
+# ---------------------------
+# Python Bytecode
+# ---------------------------
+_pycache_/
+*.pyc
+*.pyo
+*.pyd
+
+# ---------------------------
+# Flask Instance Files
+# ---------------------------
+instance/
+*.db
+*.sqlite3
+*.db-journal
+
+# Flask session folders
+flask_session/
+session/
+
+# ---------------------------
+# Virtual Environment
+# ---------------------------
+venv/
+.venv/
+ENV/
+env/
+
+# ---------------------------
+# Environment Variables
+# ---------------------------
+.env
+*.env
+
+# ---------------------------
+# Excel / Data Files
+# ---------------------------
+*.xlsx
+*.xls
+data/*
+!data/.gitkeep     # keep folder structure but ignore contents
+
+# ---------------------------
+# OS & Editor files
+# ---------------------------
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---------------------------
+# Logs
+# ---------------------------
+*.log
