@@ -1,12 +1,10 @@
 {% extends "base.html" %}
-
 {% block title %}Recommendations - CollegeFinder{% endblock %}
-
 {% block main_class %}container mt-5 pt-5{% endblock %}
 
 {% block content %}
 <div class="card shadow-sm rounded-4 p-4">
-  <h3 class="mb-3">Recommended Colleges</h3>
+  <h3 class="mb-3" style="color: white;">Recommended Colleges</h3>
   <p class="text-muted">Based on your profile{% if user and user.category %} ({{ user.category }}){% endif %}{% if session.preferred_colleges %}, and your preferences{% endif %}.</p>
 
   {% if recommendation and recommendation|length > 0 %}
@@ -14,12 +12,12 @@
       <table class="table table-hover">
         <thead>
           <tr>
-            <th>#</th>
-            <th>College</th>
-            <th>Branch</th>
-            <th>Round</th>
-            <th>Cutoff</th>
-            <th>Status</th>
+            <th style="color: black;">#</th>
+            <th style="color: black;">College</th>
+            <th style="color: black;">Branch</th>
+            <th style="color: black;">Round</th>
+            <th style="color: black;">Cutoff</th>
+            <th style="color: black;">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -29,7 +27,7 @@
             <td>{{ rec.college_name }}</td>
             <td>{{ rec.branch_name }}</td>
             <td>{{ rec.round or '-' }}</td>
-            <td>{{ rec.cutoff or '-' }}</td>
+            <td>{% if rec.cutoff is not none %}{{ "%.3f"|format(rec.cutoff) }}{% else %}-{% endif %}</td>
             <td>
               {% if rec.status == 'Safe' %}
                 <span class="badge bg-success">{{ rec.status }}</span>
@@ -46,7 +44,7 @@
     </div>
   {% else %}
     <div class="alert alert-info">
-      No recommendations found. Try updating your profile or removing preference filters.
+      No recommendations found. Try updating your profile (percentile/category) or clear preference filters.
     </div>
   {% endif %}
 
