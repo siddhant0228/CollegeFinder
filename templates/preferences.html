@@ -1,7 +1,5 @@
 {% extends "base.html" %}
-
 {% block title %}Set Preferences - CollegeFinder{% endblock %}
-
 {% block main_class %}container mt-5 pt-5{% endblock %}
 
 {% block content %}
@@ -13,43 +11,31 @@
     <strong>Note:</strong> Preferences are optional. You can generate recommendations based on your profile alone (percentile and category) or add specific college/branch preferences.
   </div>
 
-  <!-- store initial prefs as JSON in a non-JS block to avoid linter issues -->
   <script id="initial-prefs" type="application/json">
-    {
-      "colleges": {{ preferred_colleges|tojson|default('[]') }},
-      "branches": {{ preferred_branches|tojson|default('[]') }}
-    }
+    { "colleges": {{ preferred_colleges|tojson|default('[]') }}, "branches": {{ preferred_branches|tojson|default('[]') }} }
   </script>
 
   <form method="POST" id="preferences-form" novalidate>
-    <!-- Preferred Colleges -->
     <div class="mb-4">
       <label class="form-label fw-bold">Preferred Colleges (Optional - Max 10)</label>
-
       <div class="input-group mb-2">
         <input type="text" id="college-search" class="form-control" autocomplete="off" placeholder="Search and select preferred colleges (optional)">
         <button type="button" id="college-add" class="btn btn-outline-primary">Add</button>
       </div>
-
       <div id="college-suggestions" class="list-group position-relative" style="z-index:2000;"></div>
       <small class="text-muted d-block mt-2">Optional: Search and rank your preferred colleges in order of preference</small>
-
       <div id="college-selected" class="mt-3"></div>
       <input type="hidden" name="preferred_colleges" id="preferred_colleges_input" value="">
     </div>
 
-    <!-- Preferred Branches -->
     <div class="mb-4">
       <label class="form-label fw-bold">Preferred Branches (Optional - Max 10)</label>
-
       <div class="input-group mb-2">
         <input type="text" id="branch-search" class="form-control" autocomplete="off" placeholder="Search and select preferred branches (optional)">
         <button type="button" id="branch-add" class="btn btn-outline-primary">Add</button>
       </div>
-
       <div id="branch-suggestions" class="list-group position-relative" style="z-index:2000;"></div>
       <small class="text-muted d-block mt-2">Optional: Search and rank your preferred branches in order of preference</small>
-
       <div id="branch-selected" class="mt-3"></div>
       <input type="hidden" name="preferred_branches" id="preferred_branches_input" value="">
     </div>
@@ -61,28 +47,20 @@
   </form>
 </div>
 
-<!-- JavaScript (no inline Jinja inside JS) -->
-<!-- REPLACE existing <script>...</script> in preferences.html with this -->
 <script>
 (() => {
-  // Read initial prefs from the hidden JSON <script> block
+  // parse initial preferences
   let initial = { colleges: [], branches: [] };
   try {
     const el = document.getElementById('initial-prefs');
-    if (el && el.textContent.trim()) {
-      initial = JSON.parse(el.textContent);
-    }
-  } catch (e) {
-    console.error('Failed to parse initial preferences JSON', e);
-  }
+    if (el && el.textContent.trim()) initial = JSON.parse(el.textContent);
+  } catch(e){ console.error('initial prefs parse failed', e); }
 
   const MAX_ITEMS = 10;
-
-  // Selected lists (ordered) - store names for now (you could store ids instead)
   let selectedCollegeList = Array.isArray(initial.colleges) ? [...initial.colleges] : [];
-  let selectedBranchList = Array.isArray(initial.branches) ? [...initial.branches] : [];
+  let selectedBranchList  = Array.isArray(initial.branches) ? [...initial.branches] : [];
 
-  // DOM elements
+  // DOM refs
   const collegeSearch = document.getElementById('college-search');
   const collegeSuggestions = document.getElementById('college-suggestions');
   const collegeSelectedDiv = document.getElementById('college-selected');
@@ -98,184 +76,139 @@
   const preferencesForm = document.getElementById('preferences-form');
   const generateBtn = document.getElementById('generate-btn');
 
-  // Utility: debounce
-  function debounce(fn, wait = 250) {
+  function debounce(fn, wait = 220){
     let t;
-    return (...args) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn(...args), wait);
-    };
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
   }
 
-  // Simple HTML escape
-  function escapeHtml(str) {
-    if (typeof str !== 'string') return str;
-    return str.replace(/[&<>"']/g, function(m) {
-      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
-    });
-  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  // Render selected chips with ranking numbers
-  function renderSelected() {
-    // Colleges
+  function renderSelected(){
     collegeSelectedDiv.innerHTML = '';
     selectedCollegeList.forEach((name, idx) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'mb-2 d-inline-flex align-items-center';
-      wrap.innerHTML = `
-        <span class="badge bg-primary me-2" style="font-size:0.95rem; padding:0.6rem 0.8rem;">
-          <strong class="me-1">${idx+1}.</strong> ${escapeHtml(name)}
-        </span>
-        <button type="button" data-name="${escapeHtml(name)}" data-type="college" class="btn btn-sm btn-outline-danger remove-btn me-3">✕</button>
-      `;
-      collegeSelectedDiv.appendChild(wrap);
+      const item = document.createElement('div');
+      item.className = 'mb-2 d-inline-flex align-items-center';
+      item.innerHTML = `<span class="badge bg-primary me-2" style="font-size:0.95rem;"><strong>${idx+1}.</strong> ${escapeHtml(name)}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-btn" data-name="${escapeHtml(name)}" data-type="college">✕</button>`;
+      collegeSelectedDiv.appendChild(item);
     });
 
-    // Branches
     branchSelectedDiv.innerHTML = '';
     selectedBranchList.forEach((name, idx) => {
-      const wrap = document.createElement('div');
-      wrap.className = 'mb-2 d-inline-flex align-items-center';
-      wrap.innerHTML = `
-        <span class="badge bg-secondary me-2" style="font-size:0.95rem; padding:0.6rem 0.8rem;">
-          <strong class="me-1">${idx+1}.</strong> ${escapeHtml(name)}
-        </span>
-        <button type="button" data-name="${escapeHtml(name)}" data-type="branch" class="btn btn-sm btn-outline-danger remove-btn me-3">✕</button>
-      `;
-      branchSelectedDiv.appendChild(wrap);
+      const item = document.createElement('div');
+      item.className = 'mb-2 d-inline-flex align-items-center';
+      item.innerHTML = `<span class="badge bg-secondary me-2" style="font-size:0.95rem;"><strong>${idx+1}.</strong> ${escapeHtml(name)}</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-btn" data-name="${escapeHtml(name)}" data-type="branch">✕</button>`;
+      branchSelectedDiv.appendChild(item);
     });
 
-    // update hidden inputs (comma-separated)
     preferredCollegesInput.value = selectedCollegeList.join(',');
     preferredBranchesInput.value = selectedBranchList.join(',');
 
-    // attach remove handlers
-    document.querySelectorAll('.remove-btn').forEach(btn => {
-      btn.onclick = () => {
+    document.querySelectorAll('.remove-btn').forEach(btn=>{
+      btn.onclick = ()=>{
         const name = btn.getAttribute('data-name');
         const type = btn.getAttribute('data-type');
-        if (type === 'college') {
-          const idx = selectedCollegeList.indexOf(name);
-          if (idx > -1) selectedCollegeList.splice(idx, 1);
-        } else {
-          const idx = selectedBranchList.indexOf(name);
-          if (idx > -1) selectedBranchList.splice(idx, 1);
-        }
+        if (type === 'college') selectedCollegeList = selectedCollegeList.filter(x=>x!==name);
+        else selectedBranchList = selectedBranchList.filter(x=>x!==name);
         renderSelected();
       };
     });
   }
 
-  // Add handlers
-  function addCollege(name) {
-    if (!name) return;
-    if (selectedCollegeList.length >= MAX_ITEMS) {
-      alert('Maximum 10 preferred colleges allowed.');
-      return;
-    }
-    if (!selectedCollegeList.includes(name)) {
-      selectedCollegeList.push(name);
-      renderSelected();
-    }
-  }
-  function addBranch(name) {
-    if (!name) return;
-    if (selectedBranchList.length >= MAX_ITEMS) {
-      alert('Maximum 10 preferred branches allowed.');
-      return;
-    }
-    if (!selectedBranchList.includes(name)) {
-      selectedBranchList.push(name);
-      renderSelected();
-    }
+  function dedupeAndLimit(arr){
+    return Array.from(new Set(arr)).slice(0, MAX_ITEMS);
   }
 
-  collegeAddBtn.addEventListener('click', () => {
-    addCollege(collegeSearch.value.trim());
-    collegeSearch.value = '';
-    collegeSuggestions.innerHTML = '';
-  });
-  branchAddBtn.addEventListener('click', () => {
-    addBranch(branchSearch.value.trim());
-    branchSearch.value = '';
-    branchSuggestions.innerHTML = '';
-  });
-
-  // Suggestion rendering helper
-  function showSuggestions(container, items, onClick) {
+  function showSuggestions(container, items, onClick){
     container.innerHTML = '';
-    if (!items || !items.length) return;
-    const frag = document.createDocumentFragment();
-    items.forEach(it => {
+    // remove duplicates
+    const seen = new Set();
+    items.forEach(it=>{
+      if(!it || !it.name) return;
+      if(seen.has(it.name)) return;
+      seen.add(it.name);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'list-group-item list-group-item-action';
       btn.textContent = it.name;
-      btn.onclick = () => onClick(it);
-      frag.appendChild(btn);
+      btn.onclick = ()=> onClick(it);
+      container.appendChild(btn);
     });
-    container.appendChild(frag);
   }
 
-  // Fetch suggestions from API
-  const fetchCollegeSuggestions = debounce(async () => {
+  const fetchCollegeSuggestions = debounce(async ()=>{
     const q = collegeSearch.value.trim();
-    if (q.length === 0) {
-      collegeSuggestions.innerHTML = '';
-      return;
-    }
+    if (!q) { collegeSuggestions.innerHTML=''; return; }
     try {
-      const res = await fetch(/api/colleges?q=${encodeURIComponent(q)}&limit=8);
-      if (!res.ok) throw new Error('Network error');
+      const res = await fetch(`/api/colleges?q=${encodeURIComponent(q)}&limit=8`);
+      if (!res.ok) throw new Error('network');
       const data = await res.json();
-      showSuggestions(collegeSuggestions, data, (it) => {
-        addCollege(it.name);
+      showSuggestions(collegeSuggestions, data, it=>{
+        if (!selectedCollegeList.includes(it.name) && selectedCollegeList.length < MAX_ITEMS) {
+          selectedCollegeList.push(it.name);
+          selectedCollegeList = dedupeAndLimit(selectedCollegeList);
+          renderSelected();
+        }
         collegeSearch.value = '';
-        collegeSuggestions.innerHTML = '';
+        collegeSuggestions.innerHTML='';
       });
-    } catch (err) {
-      console.error('Error fetching college suggestions:', err);
-    }
+    } catch(e){ console.error('college fetch', e); }
   }, 200);
 
-  const fetchBranchSuggestions = debounce(async () => {
+  const fetchBranchSuggestions = debounce(async ()=>{
     const q = branchSearch.value.trim();
-    if (q.length === 0) {
-      branchSuggestions.innerHTML = '';
-      return;
-    }
+    if (!q) { branchSuggestions.innerHTML=''; return; }
     try {
-      const res = await fetch(/api/branches?q=${encodeURIComponent(q)}&limit=8);
-      if (!res.ok) throw new Error('Network error');
+      const res = await fetch(`/api/branches?q=${encodeURIComponent(q)}&limit=8`);
+      if (!res.ok) throw new Error('network');
       const data = await res.json();
-      showSuggestions(branchSuggestions, data, (it) => {
-        addBranch(it.name);
+      showSuggestions(branchSuggestions, data, it=>{
+        if (!selectedBranchList.includes(it.name) && selectedBranchList.length < MAX_ITEMS) {
+          selectedBranchList.push(it.name);
+          selectedBranchList = dedupeAndLimit(selectedBranchList);
+          renderSelected();
+        }
         branchSearch.value = '';
-        branchSuggestions.innerHTML = '';
+        branchSuggestions.innerHTML='';
       });
-    } catch (err) {
-      console.error('Error fetching branch suggestions:', err);
-    }
+    } catch(e){ console.error('branch fetch', e); }
   }, 200);
 
   collegeSearch.addEventListener('input', fetchCollegeSuggestions);
   branchSearch.addEventListener('input', fetchBranchSuggestions);
 
-  // Generate button -> submit form
-  generateBtn.addEventListener('click', () => {
-    // ensure hidden inputs updated
+  collegeAddBtn.onclick = ()=>{
+    const v = collegeSearch.value.trim();
+    if (!v) return;
+    if (!selectedCollegeList.includes(v) && selectedCollegeList.length < MAX_ITEMS) selectedCollegeList.push(v);
+    selectedCollegeList = dedupeAndLimit(selectedCollegeList);
+    renderSelected();
+    collegeSearch.value='';
+    collegeSuggestions.innerHTML='';
+  };
+
+  branchAddBtn.onclick = ()=>{
+    const v = branchSearch.value.trim();
+    if (!v) return;
+    if (!selectedBranchList.includes(v) && selectedBranchList.length < MAX_ITEMS) selectedBranchList.push(v);
+    selectedBranchList = dedupeAndLimit(selectedBranchList);
+    renderSelected();
+    branchSearch.value='';
+    branchSuggestions.innerHTML='';
+  };
+
+  generateBtn.onclick = ()=> {
     preferredCollegesInput.value = selectedCollegeList.join(',');
     preferredBranchesInput.value = selectedBranchList.join(',');
     preferencesForm.submit();
-  });
+  };
 
-  // Ensure hidden inputs are up-to-date before submit
-  preferencesForm.addEventListener('submit', () => {
+  preferencesForm.addEventListener('submit', ()=>{
     preferredCollegesInput.value = selectedCollegeList.join(',');
     preferredBranchesInput.value = selectedBranchList.join(',');
   });
 
-  // Initial render
   renderSelected();
 })();
 </script>
