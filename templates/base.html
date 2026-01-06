@@ -12,6 +12,17 @@
     /* small override to make bootstrap components fit the theme */
     .toast .btn-close-white { filter: drop-shadow(0 1px 0 rgba(0,0,0,0.2)); }
   </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}CollegeFinder{% endblock %}</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+
+  <style>
+    /* small override to make bootstrap components fit the theme */
+    .toast .btn-close-white { filter: drop-shadow(0 1px 0 rgba(0,0,0,0.2)); }
+  </style>
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
@@ -59,6 +70,17 @@
   {% endwith %}
 </div>
 
+<div class="{% block main_class %}{% endblock %}">
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</div>
+
+<footer class="footer text-center mt-5 mb-4">
+  <div class="container">
+    <p class="mb-0 text-muted">&copy; 2025 CollegeFinder.</p>
+  </div>
+</footer>
 <div class="{% block main_class %}{% endblock %}">
   <div class="container">
     {% block content %}{% endblock %}
